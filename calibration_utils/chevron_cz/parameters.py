@@ -1,7 +1,7 @@
 from typing import Optional, Literal, List
 import numpy as np
 from qualibrate import NodeParameters
-from qualibrate.parameters import RunnableParameters
+from qualibrate.core.parameters import RunnableParameters
 from qualibration_libs.parameters import TwoQubitExperimentNodeParameters, CommonNodeParameters
 
 
