@@ -40,7 +40,7 @@ else:
         print(f"{i+1:<4} {str(job.status):<12} {sim:<5} {started:<22} {duration:<12} {job.id}")
 
     print()
-    running = [j for j in jobs if str(j.status) in ("Running", "Pending")]
+    running = [j for j in jobs if str(j.status) in ("Running", "Pending", "Processing")]
     if running:
         print(f"!!! {len(running)} job(s) still active !!!")
         answer = input("Close all active program? (Y/n): ").strip().lower()
