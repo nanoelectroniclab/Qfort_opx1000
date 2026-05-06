@@ -37,7 +37,7 @@ else:
             duration = f"{secs//60}m {secs%60}s" if secs >= 60 else f"{secs}s"
         else:
             duration = "N/A"
-        print(f"{i+1:<4} {str(job.status):<12} {sim:<5} {started:<22} {duration:<12} {job.id}")
+        print(f"{i+1:<4} {str(job.status):<12} {sim:<5} {started:<22} {duration:<12} {job.id[:9]}")
 
     print()
     running = [j for j in jobs if str(j.status) in ("Running", "Pending", "Processing")]
