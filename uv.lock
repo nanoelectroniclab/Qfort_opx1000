@@ -8,9 +8,6 @@ resolution-markers = [
     "python_full_version < '3.11'",
 ]
 
-[options]
-prerelease-mode = "allow"
-
 [[package]]
 name = "a2wsgi"
 version = "1.10.10"
@@ -2351,6 +2348,20 @@ wheels = [
 ]
 
 [[package]]
+name = "pyvisa-py"
+version = "0.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyvisa", version = "1.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyvisa", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/55/8d/0f1af2b39feca8868d0692a2c5d0c47f4ad559a051fb678c441fe1e99536/pyvisa_py-0.8.1.tar.gz", hash = "sha256:db53d3219d971d16b8f7c764a93e08475875063635b9ad8ea3c988439833ccdd", size = 102061, upload-time = "2025-09-04T20:48:21.639Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/0b/06ccf917ce30d78d75e452d0afc89236b1d384b776c5c33d75c8cc55fbe7/pyvisa_py-0.8.1-py3-none-any.whl", hash = "sha256:31208a2933c1793b4e829ba5f07d265b83f280668df440ee7ee6ac505dea4ee9", size = 82206, upload-time = "2025-09-04T20:48:20.13Z" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2934,6 +2945,20 @@ wheels = [
 ]
 
 [[package]]
+name = "rsinstrument"
+version = "1.124.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyvisa", version = "1.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "pyvisa", version = "1.16.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d6/04/95fda2282f01b88ac212c5f5ebd8563eb572883762a202a4beb4d775f061/rsinstrument-1.124.0.tar.gz", hash = "sha256:f120b9c6c25ecca1857002beeafc39a05fae1ae73e3314b771c23fb511696d4d", size = 114847, upload-time = "2026-02-10T09:07:38.838Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/44/67379faf60adc835a57bf90dbf83a9f3ad76c7359e698b5d04f3a8506e85/rsinstrument-1.124.0-py3-none-any.whl", hash = "sha256:aedfd1f36ae3551ffa2b55ce0b8f9414e5d89c0071f7d87eaf490eb48cc95adb", size = 127941, upload-time = "2026-02-10T09:07:41.06Z" },
+]
+
+[[package]]
 name = "ruamel-yaml"
 version = "0.19.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3231,6 +3256,7 @@ source = { editable = "." }
 dependencies = [
     { name = "lmfit" },
     { name = "plotly" },
+    { name = "pyvisa-py" },
     { name = "qiskit" },
     { name = "qiskit-experiments" },
     { name = "qm-qua" },
@@ -3239,6 +3265,7 @@ dependencies = [
     { name = "qualibration-libs" },
     { name = "quam" },
     { name = "quam-builder" },
+    { name = "rsinstrument" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
@@ -3257,6 +3284,7 @@ dev = [
 requires-dist = [
     { name = "lmfit", specifier = ">=1.3.3" },
     { name = "plotly", specifier = ">=5.24.1" },
+    { name = "pyvisa-py", specifier = ">=0.8.1" },
     { name = "qiskit", specifier = "<2.0" },
     { name = "qiskit-experiments", specifier = ">=0.9.0" },
     { name = "qm-qua", specifier = ">=1.2.1" },
@@ -3265,6 +3293,7 @@ requires-dist = [
     { name = "qualibration-libs", git = "https://github.com/qua-platform/qualibration-libs.git" },
     { name = "quam", specifier = ">=0.5.0a1" },
     { name = "quam-builder", git = "https://github.com/qua-platform/quam-builder.git" },
+    { name = "rsinstrument", specifier = ">=1.124.0" },
     { name = "scipy", specifier = ">=1.13.1" },
     { name = "tomli", marker = "python_full_version < '3.11'", specifier = ">=2.0.1" },
     { name = "tqdm", specifier = ">=4.67.1" },

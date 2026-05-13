@@ -25,6 +25,8 @@ dependencies = [
     "qiskit-experiments>=0.9.0",
     "tqdm>=4.67.1",
     "qiskit<2.0",
+    "rsinstrument>=1.124.0",
+    "pyvisa-py>=0.8.1",
 ]
 
 [tool.black]
