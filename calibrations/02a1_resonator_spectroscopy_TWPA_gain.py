@@ -57,7 +57,6 @@ node = QualibrationNode[Parameters, Quam](
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
-    node.parameters.TWPA_pump_power_span_in_dbm=1
     # You can get type hinting in your IDE by typing node.parameters.
     # node.parameters.qubits = ["q1", "q2"]
     pass
@@ -146,7 +145,7 @@ def execute_qua_program(node: QualibrationNode[Parameters, Quam]):
     # Execute the QUA program only if the quantum machine is available (this is to avoid interrupting running jobs).
     with qm_session(qmm, config, timeout=node.parameters.timeout) as qm:
         #TWPA pump power sweep
-        pump_center = TWPAInfo(addr=node.parameters.TWPA_address).power
+        pump_center = node.parameters.TWPA_pump_power_center_in_dbm
         pump_frequency = TWPAInfo(addr=node.parameters.TWPA_address).frequency
         pump_span = node.parameters.TWPA_pump_power_span_in_dbm
         pump_steps = np.linspace(pump_center - pump_span / 2, pump_center + pump_span / 2, node.parameters.TWPA_pump_power_steps)
@@ -224,6 +223,14 @@ def plot_data(node: QualibrationNode[Parameters, Quam]):
 @node.run_action(skip_if=node.parameters.simulate)
 def update_state(node: QualibrationNode[Parameters, Quam]):
     """Update the relevant parameters if the qubit data analysis was successful."""
+    pump_frequency = TWPAInfo(addr=node.parameters.TWPA_address).frequency
+    open_TWPA(
+        addr=node.parameters.TWPA_address,
+        power=True, 
+        pump_frequency=pump_frequency,
+        gain=node.parameters.TWPA_pump_power_center_in_dbm
+    )
+
     with node.record_state_updates():
         for q in node.namespace["qubits"]:
             if node.outcomes[q.name] == "failed":
@@ -236,6 +243,7 @@ def update_state(node: QualibrationNode[Parameters, Quam]):
 # %% {Save_results}
 @node.run_action()
 def save_results(node: QualibrationNode[Parameters, Quam]):
+    node.results["snr_vs_twpa_amp"] = node.results["snr_vs_twpa_amp"].to_dataset(name="snr")
     node.save()
 
 # %%

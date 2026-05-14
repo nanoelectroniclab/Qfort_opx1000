@@ -57,7 +57,7 @@ node = QualibrationNode[Parameters, Quam](
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
-    node.parameters.TWPA_pump_frequency_span_in_mhz=50.0
+    node.parameters.TWPA_pump_frequency_steps = 3
     # You can get type hinting in your IDE by typing node.parameters.
     # node.parameters.qubits = ["q1", "q2"]
     pass
@@ -146,8 +146,9 @@ def execute_qua_program(node: QualibrationNode[Parameters, Quam]):
     # Execute the QUA program only if the quantum machine is available (this is to avoid interrupting running jobs).
     with qm_session(qmm, config, timeout=node.parameters.timeout) as qm:
         # TWPA pump frequency sweep (power held constant)
+        pump_center = node.parameters.TWPA_pump_frequency_center_in_mhz * 1e6
         pump_power = TWPAInfo(addr=node.parameters.TWPA_address).power
-        pump_center = TWPAInfo(addr=node.parameters.TWPA_address).frequency
+        # pump_center = node.parameters.TWPA_pump_frequency_center_in_mhz * 1e6
         pump_span = node.parameters.TWPA_pump_frequency_span_in_mhz * 1e6
         pump_freqs = np.linspace(
             pump_center - pump_span / 2,
@@ -173,6 +174,8 @@ def execute_qua_program(node: QualibrationNode[Parameters, Quam]):
             datasets.append(dataset)
             # Display the execution report to expose possible runtime errors
             node.log(job.execution_report())
+        # open_TWPA(addr=node.parameters.TWPA_address, power=True, pump_frequency=pump_center, gain=pump_power)
+
         # Register the raw dataset
         twpa_coord = xr.IndexVariable("TWPA_freq", pump_freqs, attrs={"long_name": "TWPA pump frequency", "units": "Hz"})
         concat_dataset = xr.concat(datasets, dim=twpa_coord)
@@ -228,6 +231,14 @@ def plot_data(node: QualibrationNode[Parameters, Quam]):
 @node.run_action(skip_if=node.parameters.simulate)
 def update_state(node: QualibrationNode[Parameters, Quam]):
     """Update the relevant parameters if the qubit data analysis was successful."""
+    pump_power = TWPAInfo(addr=node.parameters.TWPA_address).power
+    open_TWPA(
+        addr=node.parameters.TWPA_address,
+        power=True, 
+        pump_frequency=node.parameters.TWPA_pump_frequency_center_in_mhz * 1e6, 
+        gain=pump_power
+    )
+    
     with node.record_state_updates():
         for q in node.namespace["qubits"]:
             if node.outcomes[q.name] == "failed":
@@ -240,6 +251,7 @@ def update_state(node: QualibrationNode[Parameters, Quam]):
 # %% {Save_results}
 @node.run_action()
 def save_results(node: QualibrationNode[Parameters, Quam]):
+    node.results["snr_vs_twpa_freq"] = node.results["snr_vs_twpa_freq"].to_dataset(name="snr")
     node.save()
 
 # %%

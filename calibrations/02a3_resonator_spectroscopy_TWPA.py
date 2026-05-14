@@ -272,14 +272,16 @@ def plot_data(node: QualibrationNode[Parameters, Quam]):
 @node.run_action(skip_if=node.parameters.simulate)
 def update_state(node: QualibrationNode[Parameters, Quam]):
     """Update the relevant parameters if the qubit data analysis was successful."""
-    # with node.record_state_updates():
-    #     for q in node.namespace["qubits"]:
-    #         if node.outcomes[q.name] == "failed":
-    #             continue
-
-    #         #q.resonator.f_01 = float(node.results["fit_results"][q.name]["frequency"])
-    #         #q.resonator.RF_frequency = float(node.results["fit_results"][q.name]["frequency"])
-    pass
+    open_TWPA(
+        addr=node.parameters.TWPA_address,
+        power=True, 
+        pump_frequency=node.parameters.TWPA_pump_frequency_center_in_mhz,
+        gain=node.parameters.TWPA_pump_power_center_in_dbm
+    )
+    with node.record_state_updates():
+        for q in node.namespace["qubits"]:
+            if node.outcomes[q.name] == "failed":
+                continue
 
 # %% {Save_results}
 @node.run_action()
