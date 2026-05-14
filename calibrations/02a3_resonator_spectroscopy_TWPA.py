@@ -63,12 +63,12 @@ def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
     # You can get type hinting in your IDE by typing node.parameters.
     # node.parameters.qubits = ["q1", "q2"]
-    # node.parameters.TWPA_pump_power_center_in_dbm = 0
-    # node.parameters.TWPA_pump_power_span_in_dbm = 5
-    node.parameters.TWPA_pump_power_steps = 6
-    # node.parameters.TWPA_pump_frequency_span_in_mhz=100
-    node.parameters.TWPA_pump_frequency_steps = 6
-    # node.parameters.TWPA_pump_frequency_center_in_mhz = 6700
+    node.parameters.TWPA_pump_power_center_in_dbm = 0
+    node.parameters.TWPA_pump_power_span_in_dbm = 20
+    node.parameters.TWPA_pump_power_steps = 21
+    node.parameters.TWPA_pump_frequency_span_in_mhz= 300
+    node.parameters.TWPA_pump_frequency_steps = 21
+    node.parameters.TWPA_pump_frequency_center_in_mhz = 6750
     # node.parameters.load_data_id = 1237 
     pass
 
@@ -119,9 +119,11 @@ def create_qua_program(node: QualibrationNode[Parameters, Quam]):
     with program() as node.namespace["qua_program"]:
         I, I_st, Q, Q_st, n, n_st = node.machine.declare_qua_variables()
         df = declare(int)  # QUA variable for the readout frequency
-
-        for _ in range(len(twpa_power_sweep)):
-            for _ in range(len(twpa_freq_sweep)):
+        twpa_power = declare(int)
+        twpa_freq = declare(int)
+        with for_(twpa_power, 0, twpa_power < len(twpa_power_sweep), twpa_power + 1):
+            with for_(twpa_freq, 0, twpa_freq < len(twpa_freq_sweep), twpa_freq + 1):
+                pause()
                 for multiplexed_qubits in qubits.batch():
                     # Initialize the QPU in terms of flux points (flux tunable transmons and/or tunable couplers)
                     for qubit in multiplexed_qubits.values():
@@ -142,7 +144,7 @@ def create_qua_program(node: QualibrationNode[Parameters, Quam]):
                                 save(I[i], I_st[i])
                                 save(Q[i], Q_st[i])
                             align()
-                pause()
+                
 
         with stream_processing():
             # n_st.save("n")
@@ -194,22 +196,23 @@ def execute_qua_program(node: QualibrationNode[Parameters, Quam]):
             pump_freq_center + pump_freq_span / 2,
             node.parameters.TWPA_pump_frequency_steps,
         )
-        open_TWPA(addr=node.parameters.TWPA_address, power=True, pump_frequency=pump_freq_sweep[0], gain=pump_power_sweep[0])
         node.namespace["job"] = job = qm.execute(node.namespace["qua_program"])
         for i, pump_power in enumerate(pump_power_sweep):
             for j, pump_freq in enumerate(pump_freq_sweep):
-                open_TWPA(addr=node.parameters.TWPA_address, power=True, pump_frequency=pump_freq, gain=pump_power)
-                TWPA_info = TWPAInfo(addr=node.parameters.TWPA_address)
-                print(f"TWPA pump frequency set to {TWPA_info.frequency/1e6:.2f} MHz at {TWPA_info.power} dBm")
-
                 while not job.is_paused():
                     time.sleep(0.001)
-                job.resume()
+                open_TWPA(addr=node.parameters.TWPA_address, power=True, pump_frequency=pump_freq, gain=pump_power)
+                TWPA_info = TWPAInfo(addr=node.parameters.TWPA_address)
+                print(f"TWPA pump frequency set to {pump_freq/1e6:.2f} MHz at {pump_power} dBm")
+                time.sleep(0.01)
                 
+                job.resume()
                 print(f"Job execution {i * len(pump_freq_sweep) + j + 1}/{len(pump_power_sweep) * len(pump_freq_sweep)} completed.")
-                time.sleep(0.1) # 
+
+
         I, Q = [], []
         res = node.namespace["job"].result_handles
+        res.wait_for_all_values()
         for i in range(len(node.namespace["qubits"])):
            I.append(res.get(f"I{i+1}").fetch_all())
            Q.append(res.get(f"Q{i+1}").fetch_all())
@@ -277,7 +280,6 @@ def update_state(node: QualibrationNode[Parameters, Quam]):
     #         #q.resonator.f_01 = float(node.results["fit_results"][q.name]["frequency"])
     #         #q.resonator.RF_frequency = float(node.results["fit_results"][q.name]["frequency"])
     pass
-
 
 # %% {Save_results}
 @node.run_action()
