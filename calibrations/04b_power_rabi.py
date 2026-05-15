@@ -62,6 +62,7 @@ node.namespace["Rabi_ef"] = None
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
     # You can get type hinting in your IDE by typing node.parameters.
+    node.parameters.num_shots = 500
     # node.parameters.qubits = ["q1", "q2"]
     # node.parameters.max_number_pulses_per_sweep = 100
     # node.parameters.min_amp_factor = 0.8

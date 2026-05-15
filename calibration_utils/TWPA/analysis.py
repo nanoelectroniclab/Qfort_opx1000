@@ -246,8 +246,10 @@ def construct_ds_raw(
         data_vars={
             # ⚠️ 注意：維度名稱必須跟下面 coords 的 key 完全一致！
             # 這裡補上了 n_avg 這個維度
-            "I": (["qubit", "TWPA_power", "TWPA_freq", "n_avg", "detuning"], I_stacked),
-            "Q": (["qubit", "TWPA_power", "TWPA_freq", "n_avg", "detuning"], Q_stacked),
+            # "I": (["qubit", "TWPA_power", "TWPA_freq", "n_avg", "detuning"], I_stacked),
+            # "Q": (["qubit", "TWPA_power", "TWPA_freq", "n_avg", "detuning"], Q_stacked),
+            "I": (["qubit", "TWPA_power", "TWPA_freq", "detuning"], I_stacked),
+            "Q": (["qubit", "TWPA_power", "TWPA_freq", "detuning"], Q_stacked),
         },
         coords={
             # 直接拿你存好的完美座標軸來用
@@ -257,12 +259,12 @@ def construct_ds_raw(
             "detuning": sweep_axes["detuning"],
             
             # 補上 n_avg 的座標軸 (例如 0 到 n_avg-1)
-            "n_avg": np.arange(I_stacked.shape[3]) # 假設 n_avg 在第 3 軸
+            # "n_avg": np.arange(I_stacked.shape[3]) # 假設 n_avg 在第 3 軸
         }
     )
 
     # --- 建立完 Dataset 後，你就可以用 xarray 輕鬆平均了 ---
     # 直接把 n_avg 維度平均掉，留下的就是 4D 資料！
-    ds = ds.mean(dim="n_avg")
+    # ds = ds.mean(dim="n_avg")
 
     return ds

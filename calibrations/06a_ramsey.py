@@ -54,7 +54,9 @@ node = QualibrationNode[Parameters, Quam](name="06a_ramsey", description=descrip
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     # You can get type hinting in your IDE by typing node.parameters.
-    # node.parameters.qubits = ["q1", "q2"]
+    # node.parameters.qubits = ["q1"]
+    node.parameters.num_shots = 500
+    node.parameters.max_wait_time_in_ns = 5000
     pass
 
 
@@ -222,6 +224,7 @@ def analyse_data(node: QualibrationNode[Parameters, Quam]):
 @node.run_action(skip_if=node.parameters.simulate)
 def plot_data(node: QualibrationNode[Parameters, Quam]):
     """Plot the raw and fitted data in specific figures whose shape is given by qubit.grid_location."""
+    #TODO: Need to fix the problem of the T2* fitting result display.
     fig_raw_fit = plot_raw_data_with_fit(node.results["ds_raw"], node.namespace["qubits"], node.results["ds_fit"])
     plt.show()
     # Store the generated figures
@@ -246,3 +249,5 @@ def update_state(node: QualibrationNode[Parameters, Quam]):
 @node.run_action()
 def save_results(node: QualibrationNode[Parameters, Quam]):
     node.save()
+
+# %%

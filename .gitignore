@@ -6,6 +6,7 @@
 
 debug.py
 
+.vscode/
 data/
 
 __pycache__/

@@ -54,8 +54,9 @@ node = QualibrationNode[Parameters, Quam](
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     # You can get type hinting in your IDE by typing node.parameters.
     # node.parameters.qubits = ["q1", "q3"]
-    node.parameters.simulate = True
-    node.parameters.use_waveform_report = True
+    node.parameters.num_shots = 100
+    node.parameters.operation_amplitude_factor = 0.5
+    node.parameters.frequency_step_in_mhz = 0.5
     pass
 
 

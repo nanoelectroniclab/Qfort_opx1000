@@ -8,7 +8,7 @@ class NodeSpecificParameters(RunnableParameters):
     """Number of averages to perform. Default is 100."""
 
     # Readout frequency
-    frequency_span_in_mhz: float = 30.0
+    frequency_span_in_mhz: float = 20.0
     frequency_step_in_mhz: float = 0.1
 
     # Readout frequency

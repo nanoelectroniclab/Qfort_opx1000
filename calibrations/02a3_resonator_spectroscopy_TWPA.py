@@ -63,13 +63,13 @@ def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
     # You can get type hinting in your IDE by typing node.parameters.
     # node.parameters.qubits = ["q1", "q2"]
-    node.parameters.TWPA_pump_power_center_in_dbm = 0
-    node.parameters.TWPA_pump_power_span_in_dbm = 20
+    node.parameters.TWPA_pump_power_center_in_dbm = 20
+    node.parameters.TWPA_pump_power_span_in_dbm = 5
     node.parameters.TWPA_pump_power_steps = 21
-    node.parameters.TWPA_pump_frequency_span_in_mhz= 300
+
+    node.parameters.TWPA_pump_frequency_span_in_mhz= 100
     node.parameters.TWPA_pump_frequency_steps = 21
-    node.parameters.TWPA_pump_frequency_center_in_mhz = 6750
-    # node.parameters.load_data_id = 1237 
+    node.parameters.TWPA_pump_frequency_center_in_mhz = 6715
     pass
 
 
@@ -150,10 +150,10 @@ def create_qua_program(node: QualibrationNode[Parameters, Quam]):
             # n_st.save("n")
             for i in range(num_qubits):
                 I_st[i].buffer(len(dfs)).buffer(n_avg)\
-                    .buffer(len(twpa_freq_sweep)).buffer(len(twpa_power_sweep))\
+                    .buffer(len(twpa_freq_sweep)).buffer(len(twpa_power_sweep)).map(FUNCTIONS.average(2))\
                     .save(f"I{i+1}")
                 Q_st[i].buffer(len(dfs)).buffer(n_avg)\
-                    .buffer(len(twpa_freq_sweep)).buffer(len(twpa_power_sweep))\
+                    .buffer(len(twpa_freq_sweep)).buffer(len(twpa_power_sweep)).map(FUNCTIONS.average(2))\
                     .save(f"Q{i+1}")
 
 
@@ -275,7 +275,7 @@ def update_state(node: QualibrationNode[Parameters, Quam]):
     open_TWPA(
         addr=node.parameters.TWPA_address,
         power=True, 
-        pump_frequency=node.parameters.TWPA_pump_frequency_center_in_mhz,
+        pump_frequency=node.parameters.TWPA_pump_frequency_center_in_mhz * 1e6,
         gain=node.parameters.TWPA_pump_power_center_in_dbm
     )
     with node.record_state_updates():
