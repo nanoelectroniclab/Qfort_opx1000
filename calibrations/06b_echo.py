@@ -50,6 +50,7 @@ node = QualibrationNode[Parameters, Quam](name="06b_echo", description=descripti
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     # You can get type hinting in your IDE by typing node.parameters.
     # node.parameters.qubits = ["q1", "q2"]
+    node.parameters.log_or_linear_sweep = "linear"
     pass
 
 

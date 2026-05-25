@@ -53,10 +53,12 @@ node = QualibrationNode[Parameters, Quam](
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     # You can get type hinting in your IDE by typing node.parameters.
-    # node.parameters.qubits = ["q1", "q3"]
-    node.parameters.num_shots = 100
-    node.parameters.operation_amplitude_factor = 0.5
-    node.parameters.frequency_step_in_mhz = 0.5
+    node.parameters.qubits = ["q4"]
+    node.parameters.num_shots = 400
+    node.parameters.operation_amplitude_factor = 0.1
+    node.parameters.frequency_step_in_mhz = 0.1
+    node.parameters.frequency_span_in_mhz = 150
+    node.parameters.flux_offset_span_in_v = 0.1
     pass
 
 
@@ -221,6 +223,7 @@ def load_data(node: QualibrationNode[Parameters, Quam]):
 
 # %% {Analyse_data}
 @node.run_action(skip_if=node.parameters.simulate)
+#TODO: There is something broken. Serveral issues arise randomly.
 def analyse_data(node: QualibrationNode[Parameters, Quam]):
     """Analyse the raw data and store the fitted data in another xarray dataset "ds_fit" and the fitted results in the "fit_results" dictionary."""
     node.results["ds_raw"] = process_raw_dataset(node.results["ds_raw"], node)

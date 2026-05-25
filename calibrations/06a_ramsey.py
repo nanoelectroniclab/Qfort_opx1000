@@ -56,7 +56,8 @@ def custom_param(node: QualibrationNode[Parameters, Quam]):
     # You can get type hinting in your IDE by typing node.parameters.
     # node.parameters.qubits = ["q1"]
     node.parameters.num_shots = 500
-    node.parameters.max_wait_time_in_ns = 5000
+    node.parameters.max_wait_time_in_ns = 10000
+    node.parameters.frequency_detuning_in_mhz = 1
     pass
 
 

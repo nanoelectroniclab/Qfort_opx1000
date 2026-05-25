@@ -4,10 +4,13 @@ from typing import Dict, Tuple
 
 import numpy as np
 import xarray as xr
+from lmfit import Model, Parameter
+import matplotlib.pyplot as plt
 from qualibrate import QualibrationNode
-from qualibration_libs.analysis import fit_oscillation
+# from qualibration_libs.analysis import fit_oscillation
 from qualibration_libs.data import convert_IQ_to_V, add_amplitude_and_phase
 from quam_config.instrument_limits import instrument_limits
+from qualibration_libs.analysis.models import *
 
 
 @dataclass
@@ -161,3 +164,107 @@ def _extract_relevant_fit_parameters(fit: xr.Dataset, node: QualibrationNode):
         for q in fit.qubit.values
     }
     return fit, fit_results
+
+
+# Redifine the fitting function here.
+def _fix_initial_value(x, da):
+    if len(da.dims) == 1:
+        return float(x)
+    else:
+        return x
+
+def fit_oscillation(da, dim):
+    """
+    Fits an oscillatory model to data along a specified dimension using FFT-based initial guesses.
+    This function estimates the frequency, amplitude, and phase of an oscillatory signal in the input
+    data array `da` along the given dimension `dim` using the Fast Fourier Transform (FFT) for initial
+    parameter guesses. It then fits the data to an oscillatory model of the form:
+        y(t) = a * cos(2π * f * t + phi) + offset
+    using non-linear least squares optimization.
+    Parameters
+    ----------
+    da : xarray.DataArray
+        The input data array containing the oscillatory signal to be fitted.
+    dim : str
+        The name of the dimension along which to perform the fit.
+    Returns
+    -------
+    xarray.DataArray
+        An array containing the fitted parameters for each slice along the specified dimension.
+        The output has a new dimension 'fit_vals' with coordinates: ['a', 'f', 'phi', 'offset'],
+        corresponding to amplitude, frequency, phase, and offset of the fitted oscillation.
+    Notes
+    -----
+    - The function uses FFT to estimate initial values for frequency, amplitude, and phase.
+    - The fitting is performed using a model function (oscillation) and the lmfit library.
+    - If the fit fails, diagnostic plots are shown for debugging.
+    """
+
+    def get_freq_and_amp_and_phase(da, dim):
+        def compute_FFT(x, y):
+            N = len(x)
+            T = x[1] - x[0]
+            yf = np.fft.fft(y)
+            xf = np.fft.fftfreq(N, T)
+            mask = xf > 0.1
+            xf, fft_magnitude = xf[mask], np.abs(yf)[mask]
+            idx = np.argmax(fft_magnitude)
+            peak_freqs = xf
+            peak_amps = 2 * fft_magnitude / N
+            peak_phases = np.angle(yf[mask])
+            return peak_freqs[idx], peak_amps[idx], peak_phases[idx]
+
+        # Apply the FFT computation across the specified dimension
+        def get_fft_param(dat, idx):
+            return np.apply_along_axis(
+                lambda x: compute_FFT(da[dim].values, x)[idx], -1, dat
+            )
+
+        params = [
+            xr.apply_ufunc(get_fft_param, da, i, input_core_dims=[[dim], []])
+            for i in range(3)
+        ]
+        params = [_fix_initial_value(p, da) for p in params]
+        return [
+            p.rename(n)
+            for p, n in zip(params, ["freq guess", "amp guess", "phase guess"])
+        ]
+
+    freq_guess, amp_guess, phase_guess = get_freq_and_amp_and_phase(da, dim)
+    offset_guess = da.mean(dim=dim)
+
+    def apply_fit(x, y, a, f, phi, offset):
+        try:
+            model = Model(oscillation, independent_vars=["t"])
+            fit = model.fit(
+                y,
+                t=x,
+                a=Parameter("a", value=a, min=0),
+                f=Parameter(
+                    "f", value=f, min=np.abs(0.5 * f), max=np.abs(f * 3 + 1e-3)
+                ),
+                phi=Parameter("phi", value=phi),
+                offset=offset,
+                method='least_squares' # Try differnet optimize method for better results
+            )
+            return np.array([fit.values[k] for k in ["a", "f", "phi", "offset"]])
+        except RuntimeError as e:
+            print(f"{a=}, {f=}, {phi=}, {offset=}")
+            plt.plot(x, oscillation(x, a, f, phi, offset))
+            plt.plot(x, y)
+            plt.show()
+            raise e
+
+    fit_res = xr.apply_ufunc(
+        apply_fit,
+        da[dim],
+        da,
+        amp_guess,
+        freq_guess,
+        phase_guess,
+        offset_guess,
+        input_core_dims=[[dim], [dim], [], [], [], []],
+        output_core_dims=[["fit_vals"]],
+        vectorize=True,
+    )
+    return fit_res.assign_coords(fit_vals=("fit_vals", ["a", "f", "phi", "offset"]))

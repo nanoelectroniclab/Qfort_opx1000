@@ -25,7 +25,7 @@ from qualibration_libs.parameters import get_qubits
 from qualibration_libs.runtime import simulate_and_plot
 from qualibration_libs.data import XarrayDataFetcher
 
-
+#TODO: Need an optimization for TWPA using distance of IQ blobs.
 # %% {Description}
 description = """
         READOUT POWER OPTIMIZATION

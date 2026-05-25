@@ -217,7 +217,7 @@ def load_data(node: QualibrationNode[Parameters, Quam]):
     # Get the active qubits from the loaded node parameters
     node.namespace["qubits"] = get_qubits(node)
 
-
+#TODO: The single rabi pulse sometimes store two period. Need to Fix.
 # %% {Analyse_data}
 @node.run_action(skip_if=node.parameters.simulate)
 def analyse_data(node: QualibrationNode[Parameters, Quam]):
