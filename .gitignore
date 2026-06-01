@@ -10,3 +10,8 @@ debug.py
 data/
 
 __pycache__/
+
+.venv
+.vscode
+.idea
+.coc-settings.json
