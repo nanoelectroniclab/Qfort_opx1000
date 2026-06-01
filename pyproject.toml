@@ -29,6 +29,9 @@ dependencies = [
     "pyvisa-py>=0.8.1",
 ]
 
+[project.scripts]
+gen-node = "scripts.gen_node:main"
+
 [tool.black]
 line-length = 120
 
@@ -40,7 +43,7 @@ build-backend = "hatchling.build"
 dev = ["ipykernel>=7.0.0a1", "pytest>=8.3.5"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["calibrations", "quam_config", "calibration_utils"]
+packages = ["calibrations", "quam_config", "calibration_utils", "scripts"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
