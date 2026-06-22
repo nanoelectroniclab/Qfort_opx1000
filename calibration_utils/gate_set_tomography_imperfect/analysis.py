@@ -300,7 +300,7 @@ def fit_raw_data(
 
 
 # ---------------------------------------------------------------------------
-# Batch analysis (120b-style: sweep alpha across multiple saved node runs)
+# Batch analysis (120b-old): sweep alpha across multiple saved node runs)
 
 
 def run_batch_analysis(node: QualibrationNode, exp_design, std_model) -> Dict:

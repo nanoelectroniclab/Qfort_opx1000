@@ -49,7 +49,7 @@ Each circuit is repeated num_runs times and measured via state discrimination.
 Analysis is performed using pyGSTi StandardGST under TP, CPTP, and Ideal constraints,
 extracting Choi matrices, gate fidelities, and entanglement robustness for each gate.
 
-A batch analysis mode (120b-style) is also available: set batch_id_start and
+A batch analysis mode (120b-old) is also available: set batch_id_start and
 batch_id_end to sweep over previously saved runs with different alpha values.
 
 Prerequisites:
@@ -100,7 +100,7 @@ def create_qua_program(node: QualibrationNode[Parameters, Quam]):
     node.namespace["exp_design"] = exp_design
     node.namespace["std_model"] = std_model
 
-    # Convert pyGSTi circuits → QUA tokens
+    # Convert pyGSTi circuits to QUA tokens
     all_circuit_strs = [s.str for s in exp_design.all_circuits_needing_data]
     all_circuit_labels = [parse_gst_circuit_string(s) for s in all_circuit_strs]
     tokenized_circuits, circuit_depths = tokenize_gst_circuits(all_circuit_labels)
@@ -122,7 +122,7 @@ def create_qua_program(node: QualibrationNode[Parameters, Quam]):
     qubit = qubits[0]  # GST currently supports single-qubit only
 
     with program() as node.namespace["qua_program"]:
-        # New-style variable declaration
+        # New variable declaration
         I, I_st, Q, Q_st, n, n_st = node.machine.declare_qua_variables()
         # Old: I, I_st, Q, Q_st, n, n_st = qua_declaration(num_qubits=1)
 
@@ -264,7 +264,7 @@ def update_state(node: QualibrationNode[Parameters, Quam]):
     # old_main restored qubit thread/core assignments here after active reset,
     # because the old quam_libs implementation required deleting the core fields
     # before the QUA program and manually restoring them afterward.
-    # The new-style qubit.reset() handles thread management internally, so nothing is needed here.
+    # The new qubit.reset() handles thread management internally, so nothing is needed here.
     pass
 
 
