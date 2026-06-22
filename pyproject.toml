@@ -27,6 +27,10 @@ dependencies = [
     "qiskit<2.0",
     "rsinstrument>=1.124.0",
     "pyvisa-py>=0.8.1",
+    "pygsti>=0.9",
+    "picos>=2.4",
+    "qutip>=4.7",
+    "mosek>=10.0",
 ]
 
 [project.scripts]
