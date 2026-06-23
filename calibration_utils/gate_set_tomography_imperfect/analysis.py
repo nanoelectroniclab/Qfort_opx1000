@@ -17,7 +17,7 @@ from qualibrate import QualibrationNode
 
 
 # ---------------------------------------------------------------------------
-# Data class
+## Data class
 
 @dataclass
 class GSTResults:
@@ -47,7 +47,7 @@ def setup_gst_experiment(max_circuit_depth_in_power: int):
 
 
 # ---------------------------------------------------------------------------
-# Circuit string parsing utilities (used when building the QUA program)
+## Circuit string parsing utilities (used when building the QUA program)
 
 
 def parse_gst_circuit_string(circuit_str: str) -> List[str]:
@@ -99,7 +99,7 @@ def tokenize_gst_circuits(gst_str: List[List[str]]) -> Tuple[List[List[int]], Li
 
 
 # ---------------------------------------------------------------------------
-# QUA helper (called inside a QUA program context)
+## QUA helper (called inside a QUA program context)
 
 
 def play_tokenized_gst_circuits(tokenized_germ, depth, qubit, alpha: float = 1.0):
@@ -135,7 +135,7 @@ def play_tokenized_gst_circuits(tokenized_germ, depth, qubit, alpha: float = 1.0
 
 
 # ---------------------------------------------------------------------------
-# Dataset processing
+## Dataset processing
 
 
 def process_raw_dataset(ds: xr.Dataset, node: QualibrationNode) -> xr.Dataset:
@@ -160,7 +160,7 @@ def transform_dataset_to_gst(ds: xr.Dataset, exp_design) -> pygsti.data.DataSet:
 
 
 # ---------------------------------------------------------------------------
-# GST analysis
+## GST analysis
 
 
 def entanglement_robustness(choi_matrix, solver: str = "mosek", **extra_options) -> float:
@@ -300,7 +300,7 @@ def fit_raw_data(
 
 
 # ---------------------------------------------------------------------------
-# Batch analysis (120b-old): sweep alpha across multiple saved node runs)
+## Batch analysis (120b-old): sweep alpha across multiple saved node runs
 
 
 def run_batch_analysis(node: QualibrationNode, exp_design, std_model) -> Dict:
@@ -325,13 +325,11 @@ def run_batch_analysis(node: QualibrationNode, exp_design, std_model) -> Dict:
     )
 
     result_dict_list = []
-    ds_list = []
 
     for run_id in id_list:
         node.log(f"Loading run ID {run_id:05d}")
         loaded = node.load_from_id(run_id)
         ds_ = loaded.results["ds_raw"]
-        ds_list.append(ds_)
         result = run_gst_analysis(ds_, exp_design, std_model, log_callable=node.log)
         result_dict_list.append(result)
 

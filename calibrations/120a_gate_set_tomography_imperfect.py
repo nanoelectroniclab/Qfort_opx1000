@@ -71,11 +71,12 @@ node = QualibrationNode[Parameters, Quam](
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Set parameters locally for debugging. Ignored when run via GUI or graph."""
-    # node.parameters.qubits = ["q0"]
+    node.parameters.qubits = ["q1"]
     # node.parameters.alpha = 1.0
     # node.parameters.max_circuit_depth_in_power = 4
     # node.parameters.num_runs = 10000
     # node.parameters.reset_type = "active"
+    node.parameters.simulate = True
     pass
 
 
