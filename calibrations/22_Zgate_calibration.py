@@ -32,41 +32,24 @@ from qualibration_libs.data import XarrayDataFetcher
 description = """
         Z GATE CALIBRATION
 Logic changes vs old_main's 21_Zgate_calibration:
-    - Flux-sweep formula changed from sqrt(-frequencies/quad_term) to
-      sqrt(frequencies/abs(quad_term)): old_main assumed a single sign for
-      freq_vs_flux_01_quad_term, but it varies per qubit (verified against real state.json,
-      4 negative / 1 positive) — the original formula produced NaN for positive-sign qubits.
-    - plotting.py's x-axis limit changed from set_xlim(0, detuning.max()) to
-      set_xlim(min(0,...), max(0,...)) — same root cause, since positive-sign qubits have
-      detuning <= 0 everywhere, making detuning.max() always 0.
-    - Fixed a parameter name typo: ref_frequnecy_MHz -> ref_frequency_MHz.
+    - Flux-sweep and plotting xlim formulas now use abs(quad_term): its sign varies per
+      qubit, and the old formula produced NaN for some signs.
+    - Fixed parameter typo ref_frequnecy_MHz -> ref_frequency_MHz.
+    - Added asserts: num_points >= 2, ref_frequency_MHz >= 0 (avoid silent NaN/inf).
 
-Calibrates the flux pulse amplitude needed to produce a precise virtual/physical
-Z rotation (z90, z180, z270/-z90) on a single qubit.
-
-The sequence is a Ramsey variant: x90 - flux pulse (swept amplitude) - x90 - readout.
-Instead of sweeping idle time, the flux pulse amplitude is swept, which detunes the
-qubit for a fixed duration and accumulates a controllable phase (via the qubit's
-quadratic flux-vs-frequency relation). The resulting state-vs-detuning oscillation is
-fit with a cosine, and the flux amplitudes corresponding to 90/180/270 degree Z
-rotations are extracted from the fit.
+Calibrates the flux pulse amplitude for a physical Z rotation (z90, z180, z270/-z90) on
+a single qubit, via a Ramsey variant (x90 - flux pulse - x90 - readout) where the flux
+pulse amplitude, not idle time, is swept to accumulate phase. State-vs-detuning is fit
+with a cosine to extract the flux amplitudes for each rotation angle.
 
 Prerequisites:
-    - Resonator spectroscopy completed, so the resonator's resonance frequency is known
-      (node 02a).
-    - Calibrated single-qubit XY gates and Ramsey (nodes 04b, 06a).
-    - Calibrated readout with state discrimination (nodes 07, 08a).
-    - Cryoscope (16a/16b) completed, so flux pulses are free of transmission-line
-      distortion — otherwise the flux amplitude computed here will not match what is
-      actually delivered to the qubit.
-    - qubit.freq_vs_flux_01_quad_term must already be calibrated and non-zero
-      (node 09_ramsey_vs_flux_calibration). Its sign varies per qubit depending on the
-      chosen flux bias point, so the flux sweep below takes abs(quad_term); if it is
-      still 0 (uncalibrated), the sweep will hit division by zero and produce NaNs.
+    - Resonator spectroscopy (02a), single-qubit XY gates and Ramsey (04b, 06a), readout
+      with state discrimination (07, 08a).
+    - Cryoscope (16a/16b), so flux pulses are undistorted.
+    - qubit.freq_vs_flux_01_quad_term calibrated and non-zero (09_ramsey_vs_flux_calibration).
 
 State update:
-    - qubit.z.operations['z0'/'z90'/'z180'/'-z90'] are set to SquarePulse objects with
-      the fitted amplitudes.
+    - qubit.z.operations['z0'/'z90'/'z180'/'-z90'] set to SquarePulse with fitted amplitudes.
 """
 
 node = QualibrationNode[Parameters, Quam](
@@ -101,6 +84,12 @@ def create_qua_program(node: QualibrationNode[Parameters, Quam]):
     # Build the per-qubit flux sweep from the desired detuning range.
     # freq_vs_flux_01_quad_term's sign varies per qubit (depends on the flux bias point),
     # so abs() is used here — only its magnitude matters for the flux amplitude needed.
+    assert node.parameters.num_points >= 2, f"num_points must be >= 2, got {node.parameters.num_points}."
+    assert node.parameters.ref_frequency_MHz >= 0, (
+        "ref_frequency_MHz must be >= 0: the sweep starts at a 0 Hz offset, so a negative value "
+        f"would push early sweep points negative, causing sqrt() of a negative number "
+        f"(got {node.parameters.ref_frequency_MHz})."
+    )
     quad_terms = {qubit.name: qubit.freq_vs_flux_01_quad_term for qubit in qubits}
     frequencies = {
         qubit.name: 1e9 * np.linspace(0, 1.5 / qubit.xy.operations["x180"].length, node.parameters.num_points)
@@ -214,6 +203,10 @@ def load_data(node: QualibrationNode[Parameters, Quam]):
 
     # Same flux-sweep reconstruction as create_qua_program — see the Prerequisites note there
     # about freq_vs_flux_01_quad_term needing to be calibrated (non-zero) beforehand.
+    assert node.parameters.num_points >= 2, f"num_points must be >= 2, got {node.parameters.num_points}."
+    assert node.parameters.ref_frequency_MHz >= 0, (
+        f"ref_frequency_MHz must be >= 0, got {node.parameters.ref_frequency_MHz}."
+    )
     quad_terms = {qubit.name: qubit.freq_vs_flux_01_quad_term for qubit in qubits}
     frequencies = {
         qubit.name: 1e9 * np.linspace(0, 1.5 / qubit.xy.operations["x180"].length, node.parameters.num_points)
