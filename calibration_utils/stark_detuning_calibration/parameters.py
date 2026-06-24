@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Literal, Optional
 from qualibrate import NodeParameters
 from qualibrate.core.parameters import RunnableParameters
 from qualibration_libs.parameters import QubitsExperimentNodeParameters, CommonNodeParameters
@@ -17,6 +17,8 @@ class NodeSpecificParameters(RunnableParameters):
     """Maximum number of pulses per sweep. Default is 20."""
     DRAG_setpoint: Optional[float] = -1.0
     """DRAG setpoint. Default is -1.0."""
+    flux_point_joint_or_independent: Literal["joint", "independent"] = "joint"
+    """Whether to use the joint or independent flux offset. Default is 'joint'."""
 
 
 class Parameters(
