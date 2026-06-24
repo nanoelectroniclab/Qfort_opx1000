@@ -310,6 +310,10 @@ def run_batch_analysis(node: QualibrationNode, exp_design, std_model) -> Dict:
     Reads batch_id_start, batch_id_end, batch_alpha_start/end/step from node.parameters.
     Returns a dict with aggregated arrays for plotting.
     """
+    assert node.parameters.batch_alpha_step > 0, (
+        f"batch_alpha_step must be positive, got {node.parameters.batch_alpha_step}."
+    )
+
     id_list = list(range(node.parameters.batch_id_start, node.parameters.batch_id_end + 1))
     alpha_list = [
         round(a, 10)
