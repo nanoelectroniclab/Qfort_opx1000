@@ -48,6 +48,11 @@ that compensates the AC Stark shift; repeating more pairs amplifies any miscalib
 sharpening the resonance and pinning down the optimal detuning.
 Reference: https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.117.190503
 
+TODO (analysis improvement, not a bug): fit_raw_data averages over all nb_of_pulses values
+before locating the minimum. An independent re-derivation suggests weighting by nb_of_pulses
+(or using only the largest value with good contrast) may localize the optimal detuning more
+precisely, since low/high pulse-count traces have different width/SNR tradeoffs.
+
 Prerequisites:
     - Resonator spectroscopy (02a), calibrated x180 (04b, 06a).
     - Readout calibrated with state discrimination (07, 08a) for better SNR (optional).
