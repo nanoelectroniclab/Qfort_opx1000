@@ -38,8 +38,9 @@ Logic changes vs old_main(09a):
       is saved via get_raw_value() and restored manually in update_state.
     - Reference-valued attributes (e.g. detuning aliased to another operation) require
       setting to None before writing a plain value, or QuAM raises a ValueError.
-    - Added asserts: frequency_step_in_mhz > 0, max_number_pulses_per_sweep >= 1.
-    - Added missing flux_point_joint_or_independent parameter (used by initialize_qpu).
+    - Added asserts (frequency_step_in_mhz, max_number_pulses_per_sweep) and the missing
+      flux_point_joint_or_independent parameter; update_state now also skips on load_data_id
+      (it depends on original_values, which only create_qua_program sets).
 
 Plays an increasing number of x180/-x180 (or x90/-x90) pulse pairs at a swept drive
 detuning. The detuning that keeps the qubit in |0> regardless of pulse count is the one
@@ -243,9 +244,13 @@ def plot_data(node: QualibrationNode[Parameters, Quam]):
 
 
 # %% {Update_state}
-@node.run_action(skip_if=node.parameters.simulate)
+@node.run_action(skip_if=node.parameters.simulate or node.parameters.load_data_id is not None)
 def update_state(node: QualibrationNode[Parameters, Quam]):
-    """Restore the temporary overrides, then write the fitted Stark detuning back into the QuAM state."""
+    """Restore the temporary overrides, then write the fitted Stark detuning back into the QuAM state.
+
+    Skipped when load_data_id is set: original_values is only populated by create_qua_program,
+    which itself is skipped on the load_data_id path, so this would otherwise KeyError.
+    """
     operation = node.parameters.operation
     # Restore via the raw (possibly reference-string) value saved in create_qua_program. Setting
     # to None first is required because the current value (set in create_qua_program) is a plain
