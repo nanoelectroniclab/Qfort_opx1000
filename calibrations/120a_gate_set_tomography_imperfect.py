@@ -38,25 +38,18 @@ from qualibration_libs.data import XarrayDataFetcher
 # %% {Initialisation}
 description = """
         GATE SET TOMOGRAPHY (IMPERFECT)
-Logic changes vs old_main:
+Logic changes vs old_main(120a):
     - run_batch_analysis read loaded.results["ds"] -> fixed to "ds_raw" (actual stored key).
     - plotting fixed 2D/3D indexing bug (was always cutting the wrong axis for batch arrays).
     - count0/count1 conversion uses num_runs, not a hardcoded 2000.
     - Added asserts: id_list/alpha_list length match, batch_alpha_step > 0.
     - fit_raw_data now catches per-qubit GST failures instead of crashing the whole node.
 
-This node performs Gate Set Tomography (GST) using pyGSTi to fully characterize the
-single-qubit gate set {I, X(pi/2), Y(pi/2)}. The 'imperfect' variant adds an amplitude
-scale factor (alpha) to all gates, allowing intentional gate imperfections to be
-introduced and detected.
-
-The GST circuits are pre-computed by pyGSTi, tokenized, and stored in QUA memory.
-Each circuit is repeated num_runs times and measured via state discrimination.
-Analysis is performed using pyGSTi StandardGST under TP, CPTP, and Ideal constraints,
-extracting Choi matrices, gate fidelities, and entanglement robustness for each gate.
-
-A batch analysis mode (120b-old) is also available: set batch_id_start and
-batch_id_end to sweep over previously saved runs with different alpha values.
+Characterizes the single-qubit gate set {I, X(pi/2), Y(pi/2)} via pyGSTi StandardGST
+(TP/CPTP/Ideal), extracting Choi matrices, gate fidelities, and entanglement robustness.
+The 'imperfect' variant scales all gate amplitudes by alpha to inject and detect gate
+errors. Batch mode (set batch_id_start/end) sweeps fidelity/robustness over alpha across
+multiple saved runs.
 
 Prerequisites:
     - Having calibrated the qubit (nodes 04b, 06a, 10a/10b).
