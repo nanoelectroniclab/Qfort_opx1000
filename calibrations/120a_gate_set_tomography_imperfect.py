@@ -38,6 +38,12 @@ from qualibration_libs.data import XarrayDataFetcher
 # %% {Initialisation}
 description = """
         GATE SET TOMOGRAPHY (IMPERFECT)
+Logic changes vs old_main:
+    - run_batch_analysis read loaded.results["ds"] -> fixed to "ds_raw" (actual stored key).
+    - plotting fixed 2D/3D indexing bug (was always cutting the wrong axis for batch arrays).
+    - count0/count1 conversion uses num_runs, not a hardcoded 2000.
+    - Added asserts: id_list/alpha_list length match, batch_alpha_step > 0.
+    - fit_raw_data now catches per-qubit GST failures instead of crashing the whole node.
 
 This node performs Gate Set Tomography (GST) using pyGSTi to fully characterize the
 single-qubit gate set {I, X(pi/2), Y(pi/2)}. The 'imperfect' variant adds an amplitude
