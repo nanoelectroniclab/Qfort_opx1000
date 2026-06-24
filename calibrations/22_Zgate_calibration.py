@@ -31,7 +31,7 @@ from qualibration_libs.data import XarrayDataFetcher
 # %% {Description}
 description = """
         Z GATE CALIBRATION
-Logic changes vs old_main's 21_Zgate_calibration:
+Logic changes vs old_main(21):
     - Flux-sweep and plotting xlim formulas now use abs(quad_term): its sign varies per
       qubit, and the old formula produced NaN for some signs.
     - Fixed parameter typo ref_frequnecy_MHz -> ref_frequency_MHz.
