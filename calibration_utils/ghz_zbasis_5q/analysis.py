@@ -28,16 +28,17 @@ def log_fitted_results(fit_results: Dict, log_callable=None):
 
 
 def process_raw_dataset(ds: xr.Dataset, node: QualibrationNode) -> xr.Dataset:
-    n_shots = node.parameters.num_shots
     quintet_names = node.results["quintet_names"]
 
     raw_probs_list = []
     for qname in quintet_names:
         state_shots = ds["state"].sel(quintet=qname).values  # (shot,)
         counts = np.array([(state_shots == s).sum() for s in range(NUM_STATES)], dtype=float)
-        raw_probs_list.append(counts / n_shots)
+        # Normalise by the shots actually fetched, so a truncated run cannot produce NaNs
+        raw_probs_list.append(counts / state_shots.size)
 
-    raw_probs = np.array(raw_probs_list)  # (num_quintets, 32)
+    # reshape keeps the array 2D even when no quintet was selected
+    raw_probs = np.array(raw_probs_list).reshape(len(raw_probs_list), NUM_STATES)
     ds = ds.assign(
         raw_probs=xr.DataArray(
             raw_probs,
@@ -61,11 +62,15 @@ def fit_raw_data(
         raw_p = ds["raw_probs"].sel(quintet=qname).values  # (32,)
         conf_mats = conf_matrices[qname]  # list of 5 (2,2) arrays
 
+        # Each stored matrix is [prepared][measured] with rows summing to 1 (see 07_iq_blobs),
+        # so p_measured = conf.T @ p_true and the correction must invert the transpose.
         conf_mat_5q = np.array([[1.0]])
         for cm in conf_mats:
             conf_mat_5q = np.kron(conf_mat_5q, np.array(cm))  # builds 32×32 matrix
 
-        corrected = np.linalg.inv(conf_mat_5q) @ raw_p
+        corrected = np.linalg.inv(conf_mat_5q.T) @ raw_p
+        # Kept from old_main. Clipping negatives biases the fidelity low when readout is poor;
+        # scipy.optimize.nnls(conf_mat_5q.T, raw_p) measured ~0.03 bias vs ~0.22 at 20k shots.
         corrected = np.clip(corrected, 0, None)
         corrected /= corrected.sum()
 
@@ -78,7 +83,8 @@ def fit_raw_data(
             success=ghz_fidelity > 0.5,
         )
 
-    corrected_arr = np.array(corrected_list)
+    # reshape keeps the array 2D even when no quintet was selected
+    corrected_arr = np.array(corrected_list).reshape(len(corrected_list), NUM_STATES)
     ds = ds.assign(
         corrected_probs=xr.DataArray(
             corrected_arr,

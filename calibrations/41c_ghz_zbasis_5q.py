@@ -43,14 +43,13 @@ Prerequisites:
       if QUA program build fails with KeyError on 'cz_unipolar_pulse', re-run 20a update_state.
     - Readout confusion matrices populated (19_2Q_confusion_matrix or 07_iq_blobs).
 
-Next steps:
-    - Characterisation only — no state.json updates.
 
 Logic changes vs old_main (41c):
 - Active reset now covers all 5 qubits (was missing center and qubit_D).
 - align() added between consecutive CZ-satellite blocks.
 - Confusion matrices stored in node.results so analysis is correct on data reload.
 - CZ gate: gates['Cz'].execute() → macros['cz_unipolar'].apply().
+- Readout correction inverts conf.T; old_main used inv(conf), underestimating GHZ fidelity.
 """
 
 node = QualibrationNode[Parameters, Quam](
@@ -71,9 +70,9 @@ def custom_param(node: QualibrationNode[Parameters, Quam]):
 node.machine = Quam.load()
 
 
-# ----------------------------------------------------------------------- #
-# Helper
-# ----------------------------------------------------------------------- #
+# ---------------------------------------------------------------------------
+## Helper
+
 
 class _QubitQuintet:
     """Bundles one center qubit with its 4 CZ-connected satellites."""
@@ -126,6 +125,9 @@ def _build_quintets(node: QualibrationNode) -> list:
 def create_qua_program(node: QualibrationNode[Parameters, Quam]):
     machine = node.machine
     n_shots = node.parameters.num_shots
+    # Guard against a silent all-NaN result from dividing by zero shots
+    if n_shots < 1:
+        raise ValueError(f"num_shots must be at least 1, got {n_shots}.")
 
     qubit_quintets = _build_quintets(node)
     node.namespace["qubit_quintets"] = qubit_quintets
