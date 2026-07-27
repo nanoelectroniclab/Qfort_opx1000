@@ -44,7 +44,7 @@ Prerequisites:
 Next steps:
     - The matrix is written to qubit_pair.confusion for readout error mitigation.
 
-Logic changes vs old_main (34_2Q):
+Logic changes vs the previous 19 on main (which came from old_main 34_2Q):
 - Plot axis labels were swapped and the cell annotations transposed; both fixed.
 - Active reset no longer repeats itself 4x with an extra wait; uses qubit.reset(reset_type).
 - Dropped the unused plot_raw / measure_leak parameters and the flux_point parameter.
