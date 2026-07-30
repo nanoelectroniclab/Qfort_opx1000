@@ -34,6 +34,9 @@
 - Put API notes, hardware references, compatibility notes, and links to authoritative external material in `docs/reference/`.
 - Track human-authored Markdown and small, redistributable supporting files in Git so every worktree receives the same context.
 - Do not commit proprietary or license-restricted vendor documents without permission. Prefer an indexed link or an approved external storage location for large binary manuals.
+- Store papers and other non-public or license-restricted documents under the repository-root `.private/` directory only.
+- Keep `.private/` local to each worktree and excluded through the repository's shared `.git/info/exclude`; never stage, force-add, commit, push, or upload its contents.
+- When a worktree needs private documents, create its local `.private/` directory and verify the exclusion with `git check-ignore -v .private/<filename>`.
 - Record website references as Markdown entries with a descriptive title, stable or versioned URL, access date, and a short note explaining when to use the source.
 - When behavior or operating procedures change, update the corresponding documentation in the same branch.
 
