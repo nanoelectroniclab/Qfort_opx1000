@@ -87,7 +87,7 @@ def custom_param(node: QualibrationNode[Parameters, Quam]):
     # You can get type hinting in your IDE by typing node.parameters.
     node.parameters.simulate = False
     node.parameters.simulation_duration_ns = 1000
-    node.parameters.qubits = ["qA2"]
+    node.parameters.qubits = ["q0", "q2"]
     node.parameters.num_shots = 1000
     pass
 

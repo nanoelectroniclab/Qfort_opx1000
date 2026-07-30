@@ -57,9 +57,10 @@ node.namespace["Rabi_ef"] = True
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
     # You can get type hinting in your IDE by typing node.parameters.
-    node.parameters.use_state_discrimination = True
-    # node.parameters.qubits(["qA1", "qA2"])
-    node.parameters.load_data_id = 2714
+    # node.parameters.use_state_discrimination = True
+    node.parameters.num_shots = 500
+    node.parameters.qubits = ["q0", "q2"]
+    # node.parameters.load_data_id = 2714
     pass
 
 

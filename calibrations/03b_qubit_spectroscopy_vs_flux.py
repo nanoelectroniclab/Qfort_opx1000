@@ -53,12 +53,13 @@ node = QualibrationNode[Parameters, Quam](
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     # You can get type hinting in your IDE by typing node.parameters.
-    node.parameters.qubits = ["q4"]
-    node.parameters.num_shots = 400
-    node.parameters.operation_amplitude_factor = 0.1
-    node.parameters.frequency_step_in_mhz = 0.1
-    node.parameters.frequency_span_in_mhz = 150
-    node.parameters.flux_offset_span_in_v = 0.1
+    node.parameters.qubits = ["q0"]
+    node.parameters.num_shots = 300
+    node.parameters.operation_amplitude_factor = 0.3
+    node.parameters.frequency_step_in_mhz = 2
+    node.parameters.frequency_span_in_mhz = 80
+    node.parameters.flux_offset_span_in_v = 0.2
+    node.parameters.num_flux_points = 51
     pass
 
 

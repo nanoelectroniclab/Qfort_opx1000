@@ -2,7 +2,8 @@ from typing import Optional, Literal, List
 import numpy as np
 from qualibrate import NodeParameters
 from qualibrate.core.parameters import RunnableParameters
-from qualibration_libs.parameters import TwoQubitExperimentNodeParameters, CommonNodeParameters
+# from qualibration_libs.parameters import TwoQubitExperimentNodeParameters, CommonNodeParameters
+from qualibration_libs.parameters import QubitPairExperimentNodeParameters, CommonNodeParameters
 
 
 class NodeSpecificParameters(RunnableParameters):
@@ -22,13 +23,13 @@ class NodeSpecificParameters(RunnableParameters):
     num_shots: int = 100
     max_time_in_ns: int = 160
     amp_range: float = 0.1
-    amp_step: float = 0.003
+    amp_step: float = 0.004
 
 
 class Parameters(
     NodeParameters,
     CommonNodeParameters,
     NodeSpecificParameters,
-    TwoQubitExperimentNodeParameters,
+    QubitPairExperimentNodeParameters,
 ):
     pass

@@ -63,7 +63,8 @@ def custom_param(node: QualibrationNode[Parameters, Quam]):
     execution in the Python IDE.
     """
     # You can get type hinting in your IDE by typing node.parameters.
-    node.parameters.qubits = ["qA1", "qA3"]
+    node.parameters.qubits = ["q0", "q2"]
+    node.parameters.reset_type = "active"
     # node.parameters.load_data_id = 1524
     pass
 

@@ -24,7 +24,7 @@ from qualibrate import NodeParameters, QualibrationNode
 from qualibration_libs.data import XarrayDataFetcher
 from qualibration_libs.parameters import get_qubit_pairs, get_qubits
 from qualibration_libs.runtime import simulate_and_plot
-from quam_builder.architecture.superconducting.custom_gates.cz import CZGate
+from quam_builder.architecture.superconducting.custom_gates.flux_tunable_transmon_pair.two_qubit_gates import CZGate
 from quam_config import Quam
 from scipy.optimize import curve_fit
 
@@ -71,11 +71,13 @@ node = QualibrationNode[Parameters, Quam](
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
     """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
-    node.parameters.qubit_pairs = ["q1-2"]
-    node.parameters.reset_type = "active"
-    node.parameters.use_state_discrimination = True
-    # node.parameters.amp_step = 0.003
-    # node.parameters.amp_range = 0.2
+    node.parameters.num_shots = 100
+    node.parameters.qubit_pairs = ["q0-q2"]
+    node.parameters.reset_type = "thermal"
+    # node.parameters.use_state_discrimination = True
+    node.parameters.amp_step = 0.008
+    node.parameters.amp_range = 0.2
+    # node.parameters.max_time_in_ns = 200
     # node.parameters.load_data_id = 1979
     pass
 

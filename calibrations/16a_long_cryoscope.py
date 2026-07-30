@@ -65,7 +65,8 @@ node = QualibrationNode[Parameters, Quam](
 # %% {Custom_param}
 @node.run_action(skip_if=node.modes.external)
 def custom_param(node: QualibrationNode[Parameters, Quam]):
-    node.parameters.qubits = ["qA2"]
+    node.parameters.qubits = ["q0", "q2"]
+    node.parameters.num_shots = 500
     node.parameters.update_lo = True
     node.parameters.frequency_span_in_mhz = 200
     node.parameters.frequency_step_in_mhz = 1
