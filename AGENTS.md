@@ -29,11 +29,12 @@
 
 ## Documentation
 
-- Put behavioral requirements, experiment plans, and acceptance criteria in `spec/`.
-- Put operating procedures and project-specific setup instructions in `manual/`.
-- Put API notes, hardware references, compatibility notes, and links to authoritative external material in `reference/`.
+- Put behavioral requirements, experiment plans, and acceptance criteria in `docs/spec/`.
+- Put operating procedures and project-specific setup instructions in `docs/manual/`.
+- Put API notes, hardware references, compatibility notes, and links to authoritative external material in `docs/reference/`.
 - Track human-authored Markdown and small, redistributable supporting files in Git so every worktree receives the same context.
 - Do not commit proprietary or license-restricted vendor documents without permission. Prefer an indexed link or an approved external storage location for large binary manuals.
+- Record website references as Markdown entries with a descriptive title, stable or versioned URL, access date, and a short note explaining when to use the source.
 - When behavior or operating procedures change, update the corresponding documentation in the same branch.
 
 ## Development and Verification

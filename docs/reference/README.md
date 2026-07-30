@@ -9,3 +9,7 @@ Use this directory for concise reference material, including:
 - citations used by specifications and manuals.
 
 Distinguish verified project facts from notes or assumptions, and include a source and access date for external material when useful.
+
+## Indexed sources
+
+- [QUA overview](qua-overview.md) — official Quantum Machines introduction to QUA syntax, pulse-level control, timing, playback, and measurement.
