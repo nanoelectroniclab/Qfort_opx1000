@@ -1,258 +1,226 @@
-# %%
-"""
-Two-Qubit Readout Confusion Matrix Measurement
-
-This sequence measures the readout error when simultaneously measuring the state of two qubits. The process involves:
-
-1. Preparing the two qubits in all possible combinations of computational basis states (|00⟩, |01⟩, |10⟩, |11⟩)
-2. Performing simultaneous readout on both qubits
-3. Calculating the confusion matrix based on the measurement results
-
-For each prepared state, we measure:
-1. The readout result of the first qubit
-2. The readout result of the second qubit
-
-The measurement process involves:
-1. Initializing both qubits to the ground state
-2. Applying single-qubit gates to prepare the desired input state
-3. Performing simultaneous readout on both qubits
-4. Repeating the process multiple times to gather statistics
-
-The outcome of this measurement will be used to:
-1. Quantify the readout fidelity for two-qubit states
-2. Identify and characterize crosstalk effects in the readout process
-3. Provide data for readout error mitigation in two-qubit experiments
-
-Prerequisites:
-- Calibrated single-qubit gates for both qubits in the pair
-- Calibrated readout for both qubits
-
-Outcomes:
-- 4x4 confusion matrix representing the probabilities of measuring each two-qubit state given a prepared input state
-- Readout fidelity metrics for simultaneous two-qubit measurement
-"""
-
 # %% {Imports}
-from qualibrate import QualibrationNode, NodeParameters
-from quam_config.my_quam import Quam
-from qualibration_libs.legacy.macros import active_reset, readout_state, readout_state_gef, active_reset_gef, active_reset_simple
-from qualibration_libs.legacy.lib.plot_utils import QubitPairGrid, grid_iter, grid_pair_names
-from qualibration_libs.legacy.lib.save_utils import fetch_results_as_xarray, load_dataset
-from qualang_tools.results import progress_counter, fetching_tool
-from qualang_tools.loops import from_array
-from qualang_tools.multi_user import qm_session
-from qualang_tools.units import unit
-from qm import SimulationConfig
-from qm.qua import *
-from typing import Literal, Optional, List
 import matplotlib.pyplot as plt
 import numpy as np
-import warnings
-from qualang_tools.bakery import baking
-from qualibration_libs.legacy.lib.fit import fit_oscillation, oscillation, fix_oscillation_phi_2pi
-from qualibration_libs.legacy.lib.plot_utils import QubitPairGrid, grid_iter, grid_pair_names
-from scipy.optimize import curve_fit
-# from qualibration_libs.legacy.components.gates.two_qubit_gates import CZGate
-from qualibration_libs.legacy.lib.pulses import FluxPulse
+import xarray as xr
+from dataclasses import asdict
 
+from qm.qua import *
 
-# %% {Node_parameters}
-qubit_pair_indexes = [1]
-class Parameters(NodeParameters):
-    qubit_pairs: Optional[List[str]] = ["q%s-%s"%(i,i+1) for i in qubit_pair_indexes]
-    num_shots: int = 2000
-    flux_point_joint_or_independent: Literal["joint", "independent"] = "joint"
-    reset_type: Literal['active', 'thermal'] = "active"
-    simulate: bool = False
-    timeout: int = 100
-    load_data_id: Optional[int] = None
-    plot_raw: bool = False
-    measure_leak: bool = False
+from qualang_tools.loops import from_array
+from qualang_tools.multi_user import qm_session
+from qualang_tools.results import progress_counter
 
-
-node = QualibrationNode(
-    name="19_2Q_confusion_matrix", parameters=Parameters()
+from qualibrate import QualibrationNode
+from quam_config import Quam
+from calibration_utils.two_qubit_confusion_matrix import (
+    Parameters,
+    process_raw_dataset,
+    fit_raw_data,
+    log_fitted_results,
+    plot_raw_data_with_fit,
 )
-assert not (
-            node.parameters.simulate and node.parameters.load_data_id is not None), "If simulate is True, load_data_id must be None, and vice versa."
-
-# %% {Initialize_QuAM_and_QOP}
-# Class containing tools to help handling units and conversions.
-u = unit(coerce_to_integer=True)
-# Instantiate the QuAM class from the state file
-machine = Quam.load()
-
-# Get the relevant QuAM components
-if node.parameters.qubit_pairs is None or node.parameters.qubit_pairs == "":
-    qubit_pairs = machine.active_qubit_pairs
-else:
-    qubit_pairs = [machine.qubit_pairs[qp] for qp in node.parameters.qubit_pairs]
-# if any([qp.q1.z is None or qp.q2.z is None for qp in qubit_pairs]):
-#     warnings.warn("Found qubit pairs without a flux line. Skipping")
-
-num_qubit_pairs = len(qubit_pairs)
-
-# Generate the OPX and Octave configurations
-config = machine.generate_config()
-octave_config = machine.get_octave_config()
-# Open Communication with the QOP
-if node.parameters.load_data_id is None:
-    qmm = machine.connect()
-# %%
-
-####################
-# Helper functions #
-####################
+from qualibration_libs.parameters import get_qubit_pairs
+from qualibration_libs.runtime import simulate_and_plot
+from qualibration_libs.data import XarrayDataFetcher
 
 
-# %% {QUA_program}
-n_shots = node.parameters.num_shots  # The number of averages
+# %% {Description}
+description = """
+        TWO-QUBIT READOUT CONFUSION MATRIX
 
-flux_point = node.parameters.flux_point_joint_or_independent  # 'independent' or 'joint'
+Prepares a qubit pair in each of the four computational basis states |00>, |01>, |10>, |11>,
+reads both qubits out simultaneously and counts the outcomes. The resulting 4x4 matrix
+quantifies the simultaneous readout error, including readout crosstalk between the two qubits.
 
-with program() as CPhase_Oscillations:
-    control_initial = declare(int)
-    target_initial = declare(int)
-    n = declare(int)
-    n_st = declare_stream()
-    state_control = [declare(int) for _ in range(num_qubit_pairs)]
-    state_target = [declare(int) for _ in range(num_qubit_pairs)]
-    state = [declare(int) for _ in range(num_qubit_pairs)]
-    state_st_control = [declare_stream() for _ in range(num_qubit_pairs)]
-    state_st_target = [declare_stream() for _ in range(num_qubit_pairs)]
-    state_st = [declare_stream() for _ in range(num_qubit_pairs)]
+Convention: conf[measured, prepared] = P(measured | prepared), so every column sums to 1 and
+p_measured = conf @ p_true. Mitigation is inv(conf) with no transpose (see 21b). Note this is
+the transpose of the per-qubit qubit.resonator.confusion_matrix, which stores [prepared][measured]
+and does need inv(M.T). State discrimination is always used.
 
-    for i, qp in enumerate(qubit_pairs):
-        # Bring the active qubits to the minimum frequency point
-        if flux_point == "independent":
-            machine.apply_all_flux_to_min()
-            # qp.apply_mutual_flux_point()
-        elif flux_point == "joint":
-            machine.apply_all_flux_to_joint_idle()
-        else:
-            machine.apply_all_flux_to_zero()
-        wait(1000)
+Prerequisites:
+    - Calibrated single-qubit gates for both qubits in the pair.
+    - Calibrated readout with a discrimination threshold for both qubits (07_iq_blobs).
 
-        with for_(n, 0, n < n_shots, n + 1):
-            save(n, n_st)
-            with for_(*from_array(control_initial, [0, 1])):
-                with for_(*from_array(target_initial, [0, 1])):
-                    # reset
-                    if node.parameters.reset_type == "active":
-                        # active_reset(qp.qubit_control)
-                        # active_reset(qp.qubit_target)
-                        wait(2 * qp.qubit_control.thermalization_time * u.ns)
-                        active_reset(qp.qubit_control)
-                        active_reset(qp.qubit_target)
-                        active_reset(qp.qubit_control)
-                        active_reset(qp.qubit_target)
-                    else:
-                        wait(5 * qp.qubit_control.thermalization_time * u.ns)
-                    qp.align()
+Next steps:
+    - The matrix is written to qubit_pair.confusion for readout error mitigation.
 
-                    # setting both qubits ot the initial state
-                    with if_(control_initial == 1):
-                        qp.qubit_control.xy.play("x180")
-                    with if_(target_initial == 1):
-                        qp.qubit_target.xy.play("x180")
+Logic changes vs the previous 19 on main (which came from old_main 34_2Q):
+- Plot axis labels were swapped and the cell annotations transposed; both fixed.
+- Active reset no longer repeats itself 4x with an extra wait; uses qubit.reset(reset_type).
+- Dropped the unused plot_raw / measure_leak parameters and the flux_point parameter.
+- Added a success criterion: the correct outcome must be the most likely one per prepared state.
+- Rejects unconfigured qubit pairs and num_shots < 1 instead of failing with None / silent NaN.
+"""
 
-                    qp.align()
-                    # readout
-                    readout_state(qp.qubit_control, state_control[i])
-                    readout_state(qp.qubit_target, state_target[i])
-                    assign(state[i], state_control[i] * 2 + state_target[i])
-                    save(state_control[i], state_st_control[i])
-                    save(state_target[i], state_st_target[i])
-                    save(state[i], state_st[i])
-        align()
+node = QualibrationNode[Parameters, Quam](
+    name="19_2Q_confusion_matrix",
+    description=description,
+    parameters=Parameters(),
+)
 
-    with stream_processing():
-        n_st.save("n")
-        for i in range(num_qubit_pairs):
-            state_st_control[i].buffer(2).buffer(2).buffer(n_shots).save(f"state_control{i + 1}")
-            state_st_target[i].buffer(2).buffer(2).buffer(n_shots).save(f"state_target{i + 1}")
-            state_st[i].buffer(2).buffer(2).buffer(n_shots).save(f"state{i + 1}")
 
-# %% {Simulate_or_execute}
-if node.parameters.simulate:
-    # Simulates the QUA program for the specified duration
-    simulation_config = SimulationConfig(duration=10_000)  # In clock cycles = 4ns
-    job = qmm.simulate(config, CPhase_Oscillations, simulation_config)
-    job.get_simulated_samples().con1.plot()
-    node.results = {"figure": plt.gcf()}
-    node.machine = machine
-    node.save()
-elif node.parameters.load_data_id is None:
+@node.run_action(skip_if=node.modes.external)
+def custom_param(node: QualibrationNode[Parameters, Quam]):
+    """Allow the user to locally set the node parameters for debugging purposes, or execution in the Python IDE."""
+    # node.parameters.qubit_pairs = ["q0-q2"]
+    # node.parameters.num_shots = 2000
+    # node.parameters.reset_type = "active"
+    pass
+
+
+node.machine = Quam.load()
+
+
+# %% {Create_QUA_program}
+@node.run_action(skip_if=node.parameters.load_data_id is not None)
+def create_qua_program(node: QualibrationNode[Parameters, Quam]):
+    """Create the sweep axes and generate the QUA program from the pulse sequence and the node parameters."""
+    node.namespace["qubit_pairs"] = qubit_pairs = get_qubit_pairs(node)
+    num_qubit_pairs = len(qubit_pairs)
+
+    unconfigured = [qp.name for qp in qubit_pairs if qp.qubit_control is None or qp.qubit_target is None]
+    if unconfigured:
+        raise ValueError(
+            f"Qubit pairs {unconfigured} have no qubit_control/qubit_target in state.json. "
+            "Set them, or restrict the run with the qubit_pairs parameter."
+        )
+
+    n_shots = node.parameters.num_shots
+    # Guard against a silent all-NaN confusion matrix from dividing by zero shots
+    if n_shots < 1:
+        raise ValueError(f"num_shots must be at least 1, got {n_shots}.")
+
+    node.namespace["sweep_axes"] = {
+        "qubit_pair": xr.DataArray(qubit_pairs.get_names()),
+        "shot": xr.DataArray(np.arange(n_shots), attrs={"long_name": "shot index"}),
+        "init_state_control": xr.DataArray([0, 1], attrs={"long_name": "prepared control state"}),
+        "init_state_target": xr.DataArray([0, 1], attrs={"long_name": "prepared target state"}),
+    }
+
+    with program() as node.namespace["qua_program"]:
+        n = declare(int)
+        n_st = declare_stream()
+        control_initial = declare(int)
+        target_initial = declare(int)
+        state_control = [declare(int) for _ in range(num_qubit_pairs)]
+        state_target = [declare(int) for _ in range(num_qubit_pairs)]
+        state = [declare(int) for _ in range(num_qubit_pairs)]
+        state_st = [declare_stream() for _ in range(num_qubit_pairs)]
+
+        for multiplexed_qubit_pairs in qubit_pairs.batch():
+            for qp in multiplexed_qubit_pairs.values():
+                node.machine.initialize_qpu(target=qp.qubit_control)
+                node.machine.initialize_qpu(target=qp.qubit_target)
+            align()
+
+            with for_(n, 0, n < n_shots, n + 1):
+                save(n, n_st)
+
+                with for_(*from_array(control_initial, [0, 1])):
+                    with for_(*from_array(target_initial, [0, 1])):
+                        for i, qp in multiplexed_qubit_pairs.items():
+                            qp.qubit_control.reset(node.parameters.reset_type, node.parameters.simulate)
+                            qp.qubit_target.reset(node.parameters.reset_type, node.parameters.simulate)
+                            qp.align()
+
+                            # Prepare the basis state selected by the two sweep variables
+                            with if_(control_initial == 1):
+                                qp.qubit_control.xy.play("x180")
+                            with if_(target_initial == 1):
+                                qp.qubit_target.xy.play("x180")
+                            qp.align()
+
+                            qp.qubit_control.readout_state(state_control[i])
+                            qp.qubit_target.readout_state(state_target[i])
+                            assign(state[i], state_control[i] * 2 + state_target[i])
+                            save(state[i], state_st[i])
+                        align()
+
+        with stream_processing():
+            n_st.save("n")
+            for i in range(num_qubit_pairs):
+                state_st[i].buffer(2).buffer(2).buffer(n_shots).save(f"state{i + 1}")
+
+
+# %% {Simulate}
+@node.run_action(skip_if=node.parameters.load_data_id is not None or not node.parameters.simulate)
+def simulate_qua_program(node: QualibrationNode[Parameters, Quam]):
+    """Connect to the QOP and simulate the QUA program"""
+    qmm = node.machine.connect()
+    config = node.machine.generate_config()
+    samples, fig, wf_report = simulate_and_plot(qmm, config, node.namespace["qua_program"], node.parameters)
+    node.results["simulation"] = {"figure": fig, "wf_report": wf_report, "samples": samples}
+
+
+# %% {Execute}
+@node.run_action(skip_if=node.parameters.load_data_id is not None or node.parameters.simulate)
+def execute_qua_program(node: QualibrationNode[Parameters, Quam]):
+    """Connect to the QOP, execute the QUA program and fetch the raw data and store it in a xarray dataset called "ds_raw"."""
+    qmm = node.machine.connect()
+    config = node.machine.generate_config()
     with qm_session(qmm, config, timeout=node.parameters.timeout) as qm:
-        job = qm.execute(CPhase_Oscillations)
+        node.namespace["job"] = job = qm.execute(node.namespace["qua_program"])
+        data_fetcher = XarrayDataFetcher(job, node.namespace["sweep_axes"])
+        for dataset in data_fetcher:
+            progress_counter(
+                data_fetcher["n"],
+                node.parameters.num_shots,
+                start_time=data_fetcher.t_start,
+            )
+        node.log(job.execution_report())
+    node.results["ds_raw"] = dataset
 
-        results = fetching_tool(job, ["n"], mode="live")
-        while results.is_processing():
-            # Fetch results
-            n = results.fetch_all()[0]
-            # Progress bar
-            progress_counter(n, n_shots, start_time=results.start_time)
 
-# %% {Data_fetching_and_dataset_creation}
-if not node.parameters.simulate:
-    if node.parameters.load_data_id is None:
-        # Fetch the data from the OPX and convert it into a xarray with corresponding axes (from most inner to outer loop)
-        ds = fetch_results_as_xarray(job.result_handles, qubit_pairs,
-                                     {"init_state_target": [0, 1], "init_state_control": [0, 1],
-                                      "N": np.linspace(1, n_shots, n_shots)})
-    else:
-        ds, machine = load_dataset(node.parameters.load_data_id)
+# %% {Load_data}
+@node.run_action(skip_if=node.parameters.load_data_id is None)
+def load_data(node: QualibrationNode[Parameters, Quam]):
+    """Load a previously acquired dataset."""
+    load_data_id = node.parameters.load_data_id
+    node.load_from_id(node.parameters.load_data_id)
+    node.parameters.load_data_id = load_data_id
+    node.namespace["qubit_pairs"] = get_qubit_pairs(node)
 
-    node.results = {"ds": ds}
 
-# %%
-if not node.parameters.simulate:
-    states = [0, 1, 2, 3]
+# %% {Analyse_data}
+@node.run_action(skip_if=node.parameters.simulate)
+def analyse_data(node: QualibrationNode[Parameters, Quam]):
+    """Analyse the raw data and store the fitted data in another xarray dataset "ds_fit" and the fitted results in the "fit_results" dictionary."""
+    node.results["ds_raw"] = process_raw_dataset(node.results["ds_raw"], node)
+    node.results["ds_fit"], fit_results = fit_raw_data(node.results["ds_raw"], node)
+    node.results["fit_results"] = {k: asdict(v) for k, v in fit_results.items()}
 
-    confusions = {}
-    for qp in qubit_pairs:
-        conf = []
-        for state in states:
-            row = []
-            for q1 in [0, 1]:
-                for q0 in [0, 1]:
-                    row.append((ds.sel(qubit=qp.name).state.sel(init_state_target=q0,
-                                                                init_state_control=q1) == state).sum().values)
-            conf.append(row)
-        confusions[qp.name] = np.array(conf) / node.parameters.num_shots
+    log_fitted_results(node.results["fit_results"], log_callable=node.log)
+    node.outcomes = {
+        qp_name: ("successful" if fit_result["success"] else "failed")
+        for qp_name, fit_result in node.results["fit_results"].items()
+    }
 
-# %%
-if not node.parameters.simulate:
-    grid_names, qubit_pair_names = grid_pair_names(qubit_pairs)
-    grid = QubitPairGrid(grid_names, qubit_pair_names)
-    for ax, qubit_pair in grid_iter(grid):
-        print(qubit_pair['qubit'])
-        conf = confusions[qubit_pair['qubit']]
-        ax.pcolormesh(['00', '01', '10', '11'], ['00', '01', '10', '11'], conf)
-        for i in range(4):
-            for j in range(4):
-                if i == j:
-                    ax.text(i, j, f"{100 * conf[i][j]:.1f}%", ha="center", va="center", color="k")
-                else:
-                    ax.text(i, j, f"{100 * conf[i][j]:.1f}%", ha="center", va="center", color="w")
-        ax.set_ylabel('prepared')
-        ax.set_xlabel('measured')
-        ax.set_title(qubit_pair['qubit'])
+
+# %% {Plot_data}
+@node.run_action(skip_if=node.parameters.simulate)
+def plot_data(node: QualibrationNode[Parameters, Quam]):
+    """Plot the confusion matrix of every qubit pair as a heatmap."""
+    fig_confusion = plot_raw_data_with_fit(
+        node.results["ds_raw"],
+        node.namespace["qubit_pairs"],
+        node.results["ds_fit"],
+    )
     plt.show()
-    node.results["figure_confusion"] = grid.fig
-# %%
+    node.results["figures"] = {"confusion": fig_confusion}
+
 
 # %% {Update_state}
-if not node.parameters.simulate:
-    if node.parameters.load_data_id is None:
-        with node.record_state_updates():
-            for qp in qubit_pairs:
-                qp.confusion = confusions[qp.name].tolist()
-# %% {Save_results}
-if not node.parameters.simulate:
-    node.outcomes = {qp.name: "successful" for qp in qubit_pairs}
-    node.results["initial_parameters"] = node.parameters.model_dump()
-    node.machine = machine
-    node.save()
+@node.run_action(skip_if=node.parameters.simulate)
+def update_state(node: QualibrationNode[Parameters, Quam]):
+    """Store the measured confusion matrix on the qubit pair."""
+    with node.record_state_updates():
+        for qp in node.namespace["qubit_pairs"]:
+            if node.outcomes[qp.name] == "failed":
+                continue
+            qp.confusion = node.results["fit_results"][qp.name]["confusion_matrix"]
 
-# %%
+
+# %% {Save_results}
+@node.run_action()
+def save_results(node: QualibrationNode[Parameters, Quam]):
+    node.save()
